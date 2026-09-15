@@ -1,0 +1,34 @@
+{
+  "name": "job-queue-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-quality Job Queue Management Dashboard with NestJS, Prisma, PostgreSQL, React, and TanStack Query",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace=apps/backend run start:dev",
+    "dev:frontend": "npm --workspace=apps/frontend run dev",
+    "build:backend": "npm --workspace=apps/backend run build",
+    "build:frontend": "npm --workspace=apps/frontend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "lint:backend": "npm --workspace=apps/backend run lint",
+    "lint:frontend": "npm --workspace=apps/frontend run lint",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "test:backend": "npm --workspace=apps/backend run test",
+    "test": "npm run test:backend"
+  },
+  "keywords": [
+    "nestjs",
+    "react",
+    "typescript",
+    "prisma",
+    "postgresql",
+    "neon",
+    "tanstack-query",
+    "vite",
+    "job-queue"
+  ],
+  "author": "",
+  "license": "MIT"
+}
