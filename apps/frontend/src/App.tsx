@@ -1,42 +1,280 @@
-import React from 'react';
+import React, { useState } from 'react';
+import {
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
+import {
+  useJobs,
+  useJobCounts,
+  useCreateJob,
+  useUpdateJobStatus,
+  useDeleteJob,
+} from './hooks/useJobs';
+import { Header } from './components/Header';
+import { SummaryCards } from './components/SummaryCards';
+import { StatusFilter } from './components/StatusFilter';
+import { JobsTable } from './components/JobsTable';
+import { CreateJobModal } from './components/CreateJobModal';
+import { JobHistoryModal } from './components/JobHistoryModal';
+import { EmptyState } from './components/EmptyState';
+import { LoadingSkeleton } from './components/LoadingSkeleton';
+import { Job, JobStatus, CreateJobInput } from './types/job';
+import { getApiErrorMessage } from './api/client';
+import { AlertTriangle, CheckCircle, X } from 'lucide-react';
+import axios from 'axios';
+
+// Create a single QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+const DashboardContent: React.FC = () => {
+  const [activeFilter, setActiveFilter] = useState<JobStatus | undefined>();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [historyJob, setHistoryJob] = useState<Job | null>(null);
+
+  // Status feedback toast/banner
+  const [banner, setBanner] = useState<{
+    message: string;
+    type: 'success' | 'error' | 'conflict';
+  } | null>(null);
+
+  // Mutation track states
+  const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+
+  // Queries
+  const {
+    data: jobs = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+    dataUpdatedAt,
+  } = useJobs(activeFilter);
+
+  const { data: counts, isLoading: isCountsLoading } = useJobCounts();
+
+  // Mutations
+  const createJobMutation = useCreateJob();
+  const updateJobStatusMutation = useUpdateJobStatus();
+  const deleteJobMutation = useDeleteJob();
+
+  // Handlers
+  const handleCreateJob = async (input: CreateJobInput) => {
+    try {
+      const created = await createJobMutation.mutateAsync(input);
+      setBanner({
+        type: 'success',
+        message: `Job "${created.title}" created successfully in pending status.`,
+      });
+    } catch (err: unknown) {
+      setBanner({
+        type: 'error',
+        message: getApiErrorMessage(err),
+      });
+      throw err;
+    }
+  };
+
+  const handleUpdateStatus = async (job: Job, nextStatus: JobStatus) => {
+    setUpdatingJobId(job.id);
+    setBanner(null);
+
+    try {
+      await updateJobStatusMutation.mutateAsync({
+        id: job.id,
+        input: {
+          status: nextStatus,
+          currentStatus: job.status,
+        },
+      });
+
+      setBanner({
+        type: 'success',
+        message: `Job "${job.title}" transitioned from ${job.status} to ${nextStatus}.`,
+      });
+    } catch (err: unknown) {
+      let isConflict = false;
+      if (axios.isAxiosError(err) && err.response?.status === 409) {
+        isConflict = true;
+      }
+
+      setBanner({
+        type: isConflict ? 'conflict' : 'error',
+        message: isConflict
+          ? `Concurrency Conflict: ${getApiErrorMessage(err)}`
+          : getApiErrorMessage(err),
+      });
+    } finally {
+      setUpdatingJobId(null);
+    }
+  };
+
+  const handleDeleteJob = async (id: string) => {
+    setDeletingJobId(id);
+    try {
+      await deleteJobMutation.mutateAsync(id);
+      setBanner({
+        type: 'success',
+        message: 'Job was deleted successfully.',
+      });
+    } catch (err: unknown) {
+      setBanner({
+        type: 'error',
+        message: getApiErrorMessage(err),
+      });
+    } finally {
+      setDeletingJobId(null);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col antialiased">
+      {/* Top Header */}
+      <Header
+        lastUpdated={dataUpdatedAt ? new Date(dataUpdatedAt) : null}
+        isFetching={isFetching}
+        onRefresh={() => refetch()}
+        onCreateClick={() => setIsCreateModalOpen(true)}
+      />
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Flash Alert Banner */}
+        {banner && (
+          <div
+            role="alert"
+            className={`p-3.5 rounded-lg border flex items-center justify-between text-xs sm:text-sm animate-in fade-in duration-200 ${
+              banner.type === 'conflict'
+                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                : banner.type === 'error'
+                ? 'bg-rose-50 text-rose-900 border-rose-200'
+                : 'bg-emerald-50 text-emerald-900 border-emerald-200'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              {banner.type === 'conflict' || banner.type === 'error' ? (
+                <AlertTriangle className="h-4 w-4 shrink-0 text-current" />
+              ) : (
+                <CheckCircle className="h-4 w-4 shrink-0 text-current" />
+              )}
+              <span className="font-medium">{banner.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBanner(null)}
+              className="p-1 hover:bg-black/5 rounded transition-colors text-current"
+              aria-label="Dismiss alert"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Metric Summary Cards */}
+        <section aria-labelledby="summary-title">
+          <h2 id="summary-title" className="sr-only">
+            Job Queue Status Overview
+          </h2>
+          <SummaryCards
+            counts={counts}
+            activeFilter={activeFilter}
+            onSelectFilter={setActiveFilter}
+            isLoading={isCountsLoading}
+          />
+        </section>
+
+        {/* Queue Management Section */}
+        <section aria-labelledby="queue-table-title" className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+            <div>
+              <h2
+                id="queue-table-title"
+                className="text-sm font-semibold text-slate-900 tracking-tight"
+              >
+                Queued Tasks
+              </h2>
+              <p className="text-xs text-slate-500">
+                Live monitoring of all background worker tasks and state transitions.
+              </p>
+            </div>
+
+            {/* Status Filter Tabs */}
+            <StatusFilter
+              activeFilter={activeFilter}
+              onSelect={setActiveFilter}
+              counts={counts}
+            />
+          </div>
+
+          {/* Table / Loading / Error / Empty States */}
+          {isLoading ? (
+            <LoadingSkeleton />
+          ) : isError ? (
+            <div className="p-8 text-center bg-white border border-rose-200 rounded-xl shadow-sm">
+              <AlertTriangle className="h-8 w-8 text-rose-500 mx-auto mb-2" />
+              <h3 className="text-sm font-semibold text-slate-900">
+                Failed to load jobs
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                {getApiErrorMessage(error)}
+              </p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="mt-3 px-3 py-1.5 text-xs font-medium bg-slate-900 text-white rounded-md hover:bg-slate-800"
+              >
+                Retry Request
+              </button>
+            </div>
+          ) : jobs.length === 0 ? (
+            <EmptyState
+              statusFilter={activeFilter}
+              onCreateClick={() => setIsCreateModalOpen(true)}
+              onClearFilter={() => setActiveFilter(undefined)}
+            />
+          ) : (
+            <JobsTable
+              jobs={jobs}
+              onUpdateStatus={handleUpdateStatus}
+              onDeleteJob={handleDeleteJob}
+              onViewHistory={setHistoryJob}
+              updatingJobId={updatingJobId}
+              deletingJobId={deletingJobId}
+            />
+          )}
+        </section>
+      </main>
+
+      {/* Create Job Modal */}
+      <CreateJobModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateJob}
+        isCreating={createJobMutation.isPending}
+      />
+
+      {/* Status History Modal */}
+      <JobHistoryModal
+        job={historyJob}
+        onClose={() => setHistoryJob(null)}
+      />
+    </div>
+  );
+};
 
 export const App: React.FC = () => {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
-              JQ
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-slate-900 leading-none">
-                Job Queue Dashboard
-              </h1>
-              <p className="text-xs text-slate-500 mt-1">
-                Engineering Operations Console
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-              System Ready
-            </span>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">
-            Workspaces Initialized
-          </h2>
-          <p className="text-sm text-slate-500 mt-1">
-            NestJS Backend and React Vite Frontend configured successfully.
-          </p>
-        </div>
-      </main>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <DashboardContent />
+    </QueryClientProvider>
   );
 };
 
