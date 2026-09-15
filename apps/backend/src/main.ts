@@ -24,6 +24,14 @@ async function bootstrap() {
     }),
   );
 
+  // Global exception filter and request logger
+  const { HttpExceptionFilter } =
+    await import('./common/filters/http-exception.filter');
+  const { LoggingInterceptor } =
+    await import('./common/interceptors/logging.interceptor');
+  app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalInterceptors(new LoggingInterceptor());
+
   // Swagger OpenAPI documentation
   const config = new DocumentBuilder()
     .setTitle('Job Queue Management API')
