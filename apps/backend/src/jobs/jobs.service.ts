@@ -21,9 +21,6 @@ export class JobsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Create a new job with initial status 'pending'.
-   */
   async createJob(dto: CreateJobDto): Promise<JobEntity> {
     const job = await this.prisma.job.create({
       data: {
@@ -39,9 +36,6 @@ export class JobsService {
     return job;
   }
 
-  /**
-   * List all jobs, sorted by newest first, with optional status filtering.
-   */
   async findAllJobs(status?: JobStatus): Promise<JobEntity[]> {
     return this.prisma.job.findMany({
       where: status ? { status } : undefined,
@@ -49,9 +43,6 @@ export class JobsService {
     });
   }
 
-  /**
-   * Get a single job by ID. Throws 404 if not found.
-   */
   async findJobById(id: string): Promise<JobEntity> {
     const job = await this.prisma.job.findUnique({
       where: { id },
@@ -64,9 +55,6 @@ export class JobsService {
     return job;
   }
 
-  /**
-   * Aggregate job counts by status for quick dashboard metrics.
-   */
   async getJobCounts(): Promise<JobCounts> {
     const counts = await this.prisma.job.groupBy({
       by: ['status'],
@@ -97,19 +85,6 @@ export class JobsService {
     };
   }
 
-  /**
-   * Atomically transitions the job's status using a PostgreSQL row-level conditional update.
-   *
-   * Concurrency & State Invariant Guarantees:
-   * 1. Evaluates allowed source statuses for target `dto.status`.
-   * 2. Executes `UPDATE ... WHERE id = $id AND status IN ($allowedPrevious)` in a transaction.
-   * 3. If count === 0:
-   *    - Returns 404 if job does not exist.
-   *    - Returns 409 if job exists but is in an invalid/conflicting status (e.g. concurrent race).
-   * 4. If count === 1:
-   *    - Inserts `JobStatusHistory` record in the SAME transaction.
-   *    - Returns updated job.
-   */
   async updateJobStatus(
     id: string,
     dto: UpdateJobStatusDto,
@@ -117,7 +92,6 @@ export class JobsService {
     const targetStatus = dto.status;
 
     return await this.prisma.$transaction(async (tx) => {
-      // Find the existing job inside the transaction
       const existing = await tx.job.findUnique({
         where: { id },
         select: { id: true, status: true },
@@ -127,24 +101,22 @@ export class JobsService {
         throw new NotFoundException(`Job with ID "${id}" was not found`);
       }
 
-      // If caller provided an expected current status, verify it matches
       if (dto.currentStatus && existing.status !== dto.currentStatus) {
         throw new ConflictException(
-          `Cannot transition job: expected current status "${dto.currentStatus}", but job is currently "${existing.status}".`,
+          `Cannot transition job: expected status "${dto.currentStatus}", but current status is "${existing.status}".`,
         );
       }
 
-      // Verify the transition from existing.status to targetStatus is valid
       if (!isValidTransition(existing.status, targetStatus)) {
         throw new ConflictException(
-          `Cannot transition job from "${existing.status}" to "${targetStatus}". Valid transitions from "${existing.status}" are: [${VALID_STATUS_TRANSITIONS[existing.status].join(', ')}].`,
+          `Cannot transition job from "${existing.status}" to "${targetStatus}". Valid next statuses: [${VALID_STATUS_TRANSITIONS[existing.status].join(', ')}].`,
         );
       }
 
       const expectedPrevious = existing.status;
 
-      // PostgreSQL row-level atomic conditional update:
-      // Enforces: UPDATE job WHERE id = requestedId AND status = expectedPreviousStatus
+      // Conditional update: only matches if the row is still in the expected state.
+      // If a concurrent request moved it first, 0 rows are updated and we throw 409.
       const updateResult = await tx.job.updateMany({
         where: {
           id,
@@ -156,23 +128,21 @@ export class JobsService {
       });
 
       if (updateResult.count === 0) {
-        // Race condition: a concurrent transaction updated the status first
         const current = await tx.job.findUnique({
           where: { id },
           select: { status: true },
         });
 
         throw new ConflictException(
-          `Concurrent update conflict on job "${id}". The job status changed to "${current?.status}" before this update could be applied.`,
+          `Concurrent update conflict on job "${id}". Status was modified to "${current?.status}" by another request.`,
         );
       }
 
-      // Query the updated job
       const updatedJob = await tx.job.findUniqueOrThrow({
         where: { id },
       });
 
-      // Record status transition in history within the same atomic transaction
+      // Keep audit history in the same transaction so it never drifts from job state
       await tx.jobStatusHistory.create({
         data: {
           jobId: id,
@@ -182,17 +152,13 @@ export class JobsService {
       });
 
       this.logger.log(
-        `Job [${id}] transitioned from "${expectedPrevious}" to "${targetStatus}"`,
+        `Job [${id}] transitioned: ${expectedPrevious} -> ${targetStatus}`,
       );
 
       return updatedJob;
     });
   }
 
-  /**
-   * Deletes a job. Associated history is removed via foreign key cascade.
-   * Throws 404 if job does not exist.
-   */
   async deleteJob(id: string): Promise<{ success: boolean; message: string }> {
     const existing = await this.prisma.job.findUnique({
       where: { id },
@@ -214,10 +180,6 @@ export class JobsService {
     };
   }
 
-  /**
-   * Returns chronological status transition history for a job.
-   * Throws 404 if job does not exist.
-   */
   async getJobHistory(id: string): Promise<JobStatusHistoryEntity[]> {
     const existing = await this.prisma.job.findUnique({
       where: { id },

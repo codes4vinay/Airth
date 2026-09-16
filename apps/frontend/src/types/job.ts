@@ -35,12 +35,3 @@ export interface UpdateJobStatusInput {
   currentStatus?: JobStatus;
 }
 
-/**
- * Valid UI transitions mapping. Used to display only sensible action buttons.
- */
-export const ALLOWED_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
-  pending: ['running', 'failed'],
-  running: ['completed', 'failed'],
-  completed: [],
-  failed: [],
-};

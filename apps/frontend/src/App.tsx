@@ -1,15 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  QueryClient,
-  QueryClientProvider,
-} from '@tanstack/react-query';
-import {
-  useJobs,
-  useJobCounts,
-  useCreateJob,
-  useUpdateJobStatus,
-  useDeleteJob,
-} from './hooks/useJobs';
+import { useJobs } from './hooks/useJobs';
+import { createJob, updateJobStatus, deleteJob } from './api/jobs';
 import { Header } from './components/Header';
 import { StatusFilter } from './components/StatusFilter';
 import { JobsTable } from './components/JobsTable';
@@ -22,28 +13,18 @@ import { getApiErrorMessage } from './api/client';
 import { AlertTriangle, CheckCircle, X } from 'lucide-react';
 import axios from 'axios';
 
-// Create a single QueryClient instance
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: true,
-    },
-  },
-});
-
-const DashboardContent: React.FC = () => {
+export const App: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<JobStatus | undefined>();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [historyJob, setHistoryJob] = useState<Job | null>(null);
 
-  // Status feedback toast/banner
   const [banner, setBanner] = useState<{
     message: string;
     type: 'success' | 'error' | 'conflict';
   } | null>(null);
 
-  // Auto-dismiss alert banner after 4s for success, 6s for errors/conflicts
+  // Auto-dismiss banners: success messages clear quickly, errors/conflicts give more time to read
   useEffect(() => {
     if (!banner) return;
     const timer = setTimeout(
@@ -56,42 +37,37 @@ const DashboardContent: React.FC = () => {
     return () => clearTimeout(timer);
   }, [banner]);
 
-  // Mutation track states
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
 
-  // Queries
   const {
-    data: jobs = [],
+    jobs,
+    counts,
     isLoading,
-    isError,
-    error,
-    refetch,
     isFetching,
-    dataUpdatedAt,
+    error,
+    lastUpdated,
+    refreshJobs,
   } = useJobs(activeFilter);
 
-  const { data: counts } = useJobCounts();
-
-  // Mutations
-  const createJobMutation = useCreateJob();
-  const updateJobStatusMutation = useUpdateJobStatus();
-  const deleteJobMutation = useDeleteJob();
-
-  // Handlers
   const handleCreateJob = async (input: CreateJobInput) => {
+    setIsCreating(true);
     try {
-      const created = await createJobMutation.mutateAsync(input);
+      const created = await createJob(input);
       setBanner({
         type: 'success',
         message: `Job "${created.title}" created successfully in pending status.`,
       });
+      setIsCreateModalOpen(false);
+      await refreshJobs();
     } catch (err: unknown) {
       setBanner({
         type: 'error',
         message: getApiErrorMessage(err),
       });
       throw err;
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -100,28 +76,27 @@ const DashboardContent: React.FC = () => {
     setBanner(null);
 
     try {
-      await updateJobStatusMutation.mutateAsync({
-        id: job.id,
-        input: {
-          status: nextStatus,
-          currentStatus: job.status,
-        },
+      // Send currentStatus so the backend can verify the job hasn't changed in another tab
+
+      await updateJobStatus(job.id, {
+        status: nextStatus,
+        currentStatus: job.status,
       });
 
       setBanner({
         type: 'success',
-        message: `Job "${job.title}" transitioned from ${job.status} to ${nextStatus}.`,
+        message: `Job "${job.title}" moved to ${nextStatus}.`,
       });
+
+      await refreshJobs();
     } catch (err: unknown) {
-      let isConflict = false;
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        isConflict = true;
-      }
+      const isConflict =
+        axios.isAxiosError(err) && err.response?.status === 409;
 
       setBanner({
         type: isConflict ? 'conflict' : 'error',
         message: isConflict
-          ? `Concurrency Conflict: ${getApiErrorMessage(err)}`
+          ? `Conflict: ${getApiErrorMessage(err)}`
           : getApiErrorMessage(err),
       });
     } finally {
@@ -132,11 +107,12 @@ const DashboardContent: React.FC = () => {
   const handleDeleteJob = async (id: string) => {
     setDeletingJobId(id);
     try {
-      await deleteJobMutation.mutateAsync(id);
+      await deleteJob(id);
       setBanner({
         type: 'success',
         message: 'Job was deleted successfully.',
       });
+      await refreshJobs();
     } catch (err: unknown) {
       setBanner({
         type: 'error',
@@ -149,17 +125,14 @@ const DashboardContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col antialiased w-full max-w-full overflow-x-hidden">
-      {/* Top Header */}
       <Header
-        lastUpdated={dataUpdatedAt ? new Date(dataUpdatedAt) : null}
+        lastUpdated={lastUpdated}
         isFetching={isFetching}
-        onRefresh={() => refetch()}
+        onRefresh={refreshJobs}
         onCreateClick={() => setIsCreateModalOpen(true)}
       />
 
-      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 min-w-0">
-        {/* Flash Alert Banner */}
         {banner && (
           <div
             role="alert"
@@ -190,48 +163,44 @@ const DashboardContent: React.FC = () => {
           </div>
         )}
 
-        {/* Queue Management Section */}
-        <section aria-label="Job queue management" className="space-y-4">
-          <div className="flex items-center justify-between gap-3 min-w-0">
+        <section className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
             <StatusFilter
               activeFilter={activeFilter}
-              onSelect={setActiveFilter}
-              counts={counts}
+              onSelect={(status) => setActiveFilter(status)}
+              counts={counts || undefined}
             />
           </div>
 
-          {/* Table / Loading / Error / Empty States */}
           {isLoading ? (
             <LoadingSkeleton />
-          ) : isError ? (
-            <div className="p-8 text-center bg-white border border-rose-200 rounded-xl shadow-sm">
-              <AlertTriangle className="h-8 w-8 text-rose-500 mx-auto mb-2" />
-              <h3 className="text-sm font-semibold text-slate-900">
-                Failed to load jobs
-              </h3>
-              <p className="text-xs text-slate-500 mt-1">
-                {getApiErrorMessage(error)}
-              </p>
+          ) : error ? (
+            <div className="p-8 rounded-xl bg-rose-50 border border-rose-200 text-center space-y-3">
+              <AlertTriangle className="h-8 w-8 text-rose-600 mx-auto" />
+              <div className="text-sm font-semibold text-rose-900">
+                Failed to load job queue
+              </div>
+              <p className="text-xs text-rose-700 max-w-md mx-auto">{error}</p>
               <button
                 type="button"
-                onClick={() => refetch()}
-                className="mt-3 px-3 py-1.5 text-xs font-medium bg-slate-900 text-white rounded-md hover:bg-slate-800"
+                onClick={refreshJobs}
+                className="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-rose-600 text-white hover:bg-rose-700 transition-colors"
               >
-                Retry Request
+                Retry
               </button>
             </div>
           ) : jobs.length === 0 ? (
             <EmptyState
               statusFilter={activeFilter}
-              onCreateClick={() => setIsCreateModalOpen(true)}
               onClearFilter={() => setActiveFilter(undefined)}
+              onCreateClick={() => setIsCreateModalOpen(true)}
             />
           ) : (
             <JobsTable
               jobs={jobs}
               onUpdateStatus={handleUpdateStatus}
               onDeleteJob={handleDeleteJob}
-              onViewHistory={setHistoryJob}
+              onViewHistory={(job) => setHistoryJob(job)}
               updatingJobId={updatingJobId}
               deletingJobId={deletingJobId}
             />
@@ -239,28 +208,18 @@ const DashboardContent: React.FC = () => {
         </section>
       </main>
 
-      {/* Create Job Modal */}
       <CreateJobModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateJob}
-        isCreating={createJobMutation.isPending}
+        isCreating={isCreating}
       />
 
-      {/* Status History Modal */}
       <JobHistoryModal
         job={historyJob}
         onClose={() => setHistoryJob(null)}
       />
     </div>
-  );
-};
-
-export const App: React.FC = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <DashboardContent />
-    </QueryClientProvider>
   );
 };
 

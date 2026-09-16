@@ -1,8 +1,7 @@
 # Job Queue Management Dashboard
 
-A production-grade, full-stack Job Queue Management Dashboard built with **NestJS**, **Prisma ORM**, **PostgreSQL (Neon)**, **React**, **TypeScript**, **Vite**, **TailwindCSS**, and **TanStack Query**.
+Job management dashboard built with React and NestJS with PostgreSQL persistence and safe concurrent status transitions.
 
-Designed and engineered to enforce strict, concurrency-safe job lifecycle state transitions with row-level PostgreSQL conditional atomicity, comprehensive audit history, and low-latency client synchronization.
 
 ---
 
@@ -21,10 +20,9 @@ Designed and engineered to enforce strict, concurrency-safe job lifecycle state 
 - **Concurrency-Safe Atomic State Transitions**: Prevents race conditions when multiple browser tabs or distributed workers attempt to modify the same job simultaneously.
 - **Strict Business Invariant Enforcement**: Invalid transitions are rejected at the database and application boundary with `409 Conflict`. Terminal states (`completed`, `failed`) can never be re-activated.
 - **Full Audit History (Bonus 1)**: Every valid transition records an immutable log entry in `JobStatusHistory` containing previous status, next status, and exact timestamp—executed within the same database transaction.
-- **Background Polling & Live Sync (Bonus 2)**: TanStack Query automatically polls the jobs list every 10 seconds while the dashboard is active, immediately stopping when the tab is blurred or unmounted to preserve network bandwidth and battery life.
+- **Background Polling & Live Sync (Bonus 2)**: Automatically polls the jobs list every 10 seconds while the dashboard is active, immediately stopping when the tab is blurred or hidden using native browser `visibilitychange` events to preserve network bandwidth and battery life.
 - **Metric Summary Cards**: Aggregated counts for Total, Pending, Running, Completed, and Failed jobs that double as quick filters.
 - **Internal Engineering Console Aesthetics**: Restrained, accessible TailwindCSS design focusing on utility, clarity, visible focus states, and responsive layout for mobile and desktop.
-- **Exhaustive Automated Testing**: 29 unit, integration, validation, and concurrency tests covering all 15 business specification requirements using Jest and Supertest.
 - **OpenAPI / Swagger Documentation**: Available at `/docs` with detailed request/response schemas, DTOs, and HTTP status codes.
 
 ---
@@ -33,11 +31,10 @@ Designed and engineered to enforce strict, concurrency-safe job lifecycle state 
 
 | Layer | Technologies |
 |---|---|
-| **Frontend** | React 18, TypeScript, Vite 6, TailwindCSS 3, TanStack Query v5, Axios, Lucide React, clsx |
+| **Frontend** | React 18, TypeScript, Vite 6, TailwindCSS 3, Axios, Lucide React, clsx |
 | **Backend** | NestJS 10, TypeScript, Express, class-validator, class-transformer, Swagger OpenAPI |
 | **Database** | PostgreSQL, Neon Serverless PostgreSQL (Pooled & Direct connections) |
 | **ORM & Migrations** | Prisma ORM v6 with SQL migrations |
-| **Testing** | Jest, ts-jest, Supertest |
 | **Monorepo** | npm workspaces |
 
 ---
@@ -47,13 +44,13 @@ Designed and engineered to enforce strict, concurrency-safe job lifecycle state 
 ```mermaid
 flowchart TD
     subgraph Client["Frontend Client (React + Vite)"]
-        UI[Dashboard UI & Summary Cards]
-        TQ["TanStack Query (useJobs, useUpdateJobStatus)"]
+        UI[Dashboard UI & Segmented Controls]
+        Hook["React Custom Hook (useJobs)"]
         AxiosClient["Axios HTTP Client"]
         Poll["10s Visibility-Aware Polling"]
-        UI --> TQ
-        Poll -.-> TQ
-        TQ --> AxiosClient
+        UI --> Hook
+        Poll -.-> Hook
+        Hook --> AxiosClient
     end
 
     subgraph Server["Backend API (NestJS)"]
@@ -164,9 +161,9 @@ The assignment invites adding a small improvement that makes the system more pro
 - **What was added**: A dedicated PostgreSQL table `job_status_histories` tracking `id`, `jobId`, `fromStatus`, `toStatus`, and `changedAt`.
 - **Why chosen**: Real-world job queues and distributed worker pipelines require auditability. When background jobs fail or get stuck, engineers need to see the exact progression of states and timestamps rather than just the final state. Executing the history insertion in the same transaction as the job status update guarantees that every successful transition has an audit trail and no failed transition produces orphaned logs.
 
-### Bonus 2: Tab-Aware Background Polling with TanStack Query
-- **What was added**: 10-second automatic polling with `refetchIntervalInBackground: false` and centralized `POLLING_INTERVAL_MS` constant.
-- **Why chosen**: In production dashboards, engineers leave monitoring tabs open for days. Naive `setInterval` implementations cause memory leaks, battery drain, and uncoordinated requests. TanStack Query automatically halts network requests when the browser tab is inactive or minimized, immediately syncing the latest data upon refocus.
+### Bonus 2: Tab-Aware Background Polling with React Lifecycle
+- **What was added**: 10-second automatic polling with browser visibility awareness (`document.visibilityState`) and centralized `POLLING_INTERVAL_MS` constant.
+- **Why chosen**: In production dashboards, engineers leave monitoring tabs open for days. Naive `setInterval` implementations cause memory leaks, battery drain, and uncoordinated requests. The custom hook automatically halts interval requests when the browser tab is hidden or minimized, immediately fetching fresh data upon refocus.
 
 ---
 
@@ -242,16 +239,15 @@ Interactive Swagger documentation is available locally at:
 | `PATCH` | `/jobs/:id/status` | 200 / 400 / 404 / 409 | Atomically advance job status. Accepts `{ status, currentStatus? }`. |
 | `DELETE` | `/jobs/:id` | 200 / 404 | Delete a job and cascade delete history. |
 | `GET` | `/jobs/:id/history` | 200 / 404 | Retrieve chronological status history entries for a job. |
-| `GET` | `/health` | 200 | Health check for container/orchestrator liveness probes. |
 
 ---
 
 ## Polling & Real-Time Sync (Bonus 2)
 
-- **Implementation**: Utilizes TanStack Query's `refetchInterval: 10000` (10 seconds).
-- **Tab Visibility Awareness**: `refetchIntervalInBackground` is set to `false`. Polling automatically pauses when the browser tab loses focus or is minimized, preventing unnecessary server load.
-- **Centralized Configuration**: The interval is defined once in [config.ts](file:///c:/Users/kumar/OneDrive/Desktop/Airth/apps/frontend/src/constants/config.ts) (`POLLING_INTERVAL_MS`).
-- **User Feedback**: The header features an active pulse indicator showing "Auto-refresh (10s)", the timestamp of the last successful sync, and a manual refresh trigger.
+- **Implementation**: Utilizes native React `useEffect` with a single centralized interval (`JOB_POLL_INTERVAL = 10_000` ms).
+- **Tab Visibility Awareness**: Listens to the browser's `visibilitychange` event. Polling automatically pauses when `document.visibilityState !== 'visible'` and triggers an immediate refresh upon tab refocus.
+- **Clean Teardown**: Properly unregisters event listeners and clears the interval timer when the component unmounts to prevent memory leaks.
+
 
 ---
 
@@ -304,14 +300,7 @@ npm run dev:frontend
 
 ---
 
-## Verification, Testing & Build Commands
-
-### Automated Tests
-Run the complete Jest & Supertest test suite:
-```bash
-npm test
-```
-*Outputs 29 passed tests across 3 test suites covering valid creation, input validation, state transitions, rejection of terminal re-activations, 404s, 409 conflicts, history recording, and concurrency simulations.*
+## Verification & Build Commands
 
 ### Linting & Type Checking
 ```bash
@@ -363,7 +352,7 @@ npm run build
 
 1. **UUIDs for Identifiers**: UUIDv4 strings were selected over sequential integers to prevent enumeration attacks and simplify distributed job generation.
 2. **PostgreSQL Row-Level Locking vs. Redis Distributed Locks**: For single-database deployments, PostgreSQL's row-level locking via conditional updates provides ACID-level guarantees without introducing external caching infrastructure.
-3. **Optimistic Invalidation in TanStack Query**: Mutations invalidate queries rather than purely patching local cache, ensuring that any concurrent changes by other team members are immediately pulled and synchronized.
+3. **Optimistic UI Updates with Database Synchronization**: Status mutations apply immediate optimistic feedback to the local UI state (0ms latency), rolling back safely if a concurrency conflict (409) occurs, followed by full database re-synchronization.
 
 ---
 

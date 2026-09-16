@@ -8,18 +8,18 @@ import {
   UpdateJobStatusInput,
 } from '../types/job';
 
-export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
+export async function getJobs(status?: JobStatus): Promise<Job[]> {
   const params = status ? { status } : undefined;
   const response = await apiClient.get<Job[]>('/jobs', { params });
   return response.data;
 }
 
-export async function fetchJobCounts(): Promise<JobCounts> {
+export async function getJobCounts(): Promise<JobCounts> {
   const response = await apiClient.get<JobCounts>('/jobs/counts');
   return response.data;
 }
 
-export async function fetchJobById(id: string): Promise<Job> {
+export async function getJobById(id: string): Promise<Job> {
   const response = await apiClient.get<Job>(`/jobs/${id}`);
   return response.data;
 }
@@ -46,7 +46,7 @@ export async function deleteJob(
   return response.data;
 }
 
-export async function fetchJobHistory(id: string): Promise<JobStatusHistory[]> {
+export async function getJobHistory(id: string): Promise<JobStatusHistory[]> {
   const response = await apiClient.get<JobStatusHistory[]>(`/jobs/${id}/history`);
   return response.data;
 }

@@ -75,6 +75,6 @@ export const JobActions: React.FC<JobActionsProps> = ({
     );
   }
 
-  // Terminal states (completed or failed)
   return <span className="text-slate-300 font-mono text-xs select-none">—</span>;
+
 };

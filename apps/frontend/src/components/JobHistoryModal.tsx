@@ -10,7 +10,7 @@ interface JobHistoryModalProps {
 }
 
 export const JobHistoryModal: React.FC<JobHistoryModalProps> = ({ job, onClose }) => {
-  const { data: history = [], isLoading, error } = useJobHistory(job ? job.id : null);
+  const { history, isLoading, error } = useJobHistory(job ? job.id : null);
 
   if (!job) return null;
 
@@ -22,8 +22,8 @@ export const JobHistoryModal: React.FC<JobHistoryModalProps> = ({ job, onClose }
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
     >
       <div className="relative w-full max-w-xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+
           <div className="flex items-center gap-2">
             <History className="h-5 w-5 text-slate-700" />
             <div>
@@ -45,8 +45,8 @@ export const JobHistoryModal: React.FC<JobHistoryModalProps> = ({ job, onClose }
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6">
+
           <div className="mb-4 p-3 rounded-lg bg-slate-50 border border-slate-200/80 flex items-center justify-between">
             <div>
               <span className="text-xs text-slate-500 block">Current Status</span>
@@ -101,8 +101,8 @@ export const JobHistoryModal: React.FC<JobHistoryModalProps> = ({ job, onClose }
           )}
         </div>
 
-        {/* Footer */}
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 text-right">
+
           <button
             type="button"
             onClick={onClose}

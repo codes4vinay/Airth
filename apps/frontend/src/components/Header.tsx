@@ -25,7 +25,6 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 sm:h-15 flex items-center justify-between gap-3">
-        {/* Brand */}
         <div className="flex items-center space-x-2.5 min-w-0">
           <div className="h-8 w-8 rounded-md bg-slate-900 text-white flex items-center justify-center shrink-0">
             <Layers className="h-4 w-4 text-slate-200" />
@@ -37,9 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-          {/* Manual Refresh button */}
           <button
             type="button"
             onClick={onRefresh}
@@ -54,7 +51,6 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Refresh</span>
           </button>
 
-          {/* New Job CTA */}
           <button
             type="button"
             onClick={onCreateClick}

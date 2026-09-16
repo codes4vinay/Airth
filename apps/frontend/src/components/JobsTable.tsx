@@ -28,14 +28,14 @@ export const JobsTable: React.FC<JobsTableProps> = ({
       await onDeleteJob(id);
       setConfirmDeleteId(null);
     } catch {
-      // Handled by mutation hook / error toast
+      // Deletion failure will trigger error banner in parent App
     }
   };
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-      {/* Desktop Table View */}
       <div className="hidden md:block overflow-x-auto">
+
         <table className="w-full text-left border-collapse" aria-label="Job queue table">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
@@ -70,7 +70,6 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                   key={job.id}
                   className="hover:bg-slate-50/70 transition-colors group"
                 >
-                  {/* Title & Short UUID */}
                   <td className="py-3.5 px-4 max-w-xs">
                     <div className="font-medium text-slate-900 truncate">
                       {job.title}
@@ -83,19 +82,16 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Type */}
                   <td className="py-3.5 px-4">
                     <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200/80 font-medium">
                       {job.type}
                     </span>
                   </td>
 
-                  {/* Status Badge */}
                   <td className="py-3.5 px-4">
                     <StatusBadge status={job.status} />
                   </td>
 
-                  {/* Created At */}
                   <td className="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
                     <div>
                       {createdDate.toLocaleDateString([], {
@@ -111,7 +107,6 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Status Transitions */}
                   <td className="py-3.5 px-4 text-center">
                     <div className="flex justify-center">
                       <JobActions
@@ -122,10 +117,8 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Management: History & Delete */}
                   <td className="py-3.5 px-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {/* View History Button */}
                       <button
                         type="button"
                         onClick={() => onViewHistory(job)}
@@ -136,7 +129,6 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                         <History className="h-4 w-4" />
                       </button>
 
-                      {/* Delete Button / Confirmation */}
                       {confirmDeleteId === job.id ? (
                         <div className="flex items-center gap-1 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 animate-in fade-in">
                           <button
@@ -176,8 +168,8 @@ export const JobsTable: React.FC<JobsTableProps> = ({
         </table>
       </div>
 
-      {/* Mobile Responsive Cards View */}
       <div className="md:hidden divide-y divide-slate-200">
+
         {jobs.map((job) => {
           const isUpdating = updatingJobId === job.id;
           const isDeleting = deletingJobId === job.id;

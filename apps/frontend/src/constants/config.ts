@@ -1,10 +1,9 @@
 import { JobStatus } from '../types/job';
 
-/**
- * Polling interval for TanStack Query auto-refresh in milliseconds.
- * Centralized constant as required by specification.
- */
-export const POLLING_INTERVAL_MS = 10000;
+export const JOB_POLL_INTERVAL = 10_000;
+
+
+
 
 export interface StatusMeta {
   label: string;

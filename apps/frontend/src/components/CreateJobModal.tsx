@@ -59,7 +59,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
     >
       <div className="relative w-full max-w-lg bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <div className="flex items-center gap-2">
             <PlusCircle className="h-5 w-5 text-blue-600" />
@@ -77,7 +76,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
             <div
@@ -88,7 +86,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
             </div>
           )}
 
-          {/* Title Field */}
           <div>
             <label
               htmlFor="job-title"
@@ -109,7 +106,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
             />
           </div>
 
-          {/* Type Field */}
           <div>
             <label
               htmlFor="job-type"
@@ -128,7 +124,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
               disabled={isCreating}
             />
 
-            {/* Quick Type Suggestions */}
             <div className="mt-2 flex flex-wrap gap-1.5 items-center">
               <span className="text-[11px] text-slate-400">Presets:</span>
               {PRESET_JOB_TYPES.map((preset) => (
@@ -144,7 +139,6 @@ export const CreateJobModal: React.FC<CreateJobModalProps> = ({
             </div>
           </div>
 
-          {/* Actions */}
           <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
             <button
               type="button"

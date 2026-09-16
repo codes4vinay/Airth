@@ -20,10 +20,8 @@ export interface ApiErrorResponse {
   path?: string;
 }
 
-/**
- * Extracts a user-friendly error message from an Axios error.
- */
 export function getApiErrorMessage(error: unknown): string {
+
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiErrorResponse>;
     if (axiosError.response?.data?.message) {
