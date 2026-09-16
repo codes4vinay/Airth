@@ -57,9 +57,7 @@ completed  failed (both terminal)
 
 ---
 
-## Think About This: Concurrency & Edge Cases
-
-The assignment poses four key questions regarding real-world edge cases:
+## Concurrency & Edge Cases
 
 ### 1. Where should this rule be enforced?
 **On the backend at the database layer.** The frontend UI conditionally displays action buttons for user convenience, but client-side logic is never trusted. The backend service and database transaction authoritatively determine whether a transition is allowed.
