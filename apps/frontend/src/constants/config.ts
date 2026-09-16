@@ -26,7 +26,7 @@ export const STATUS_CONFIG: Record<JobStatus, StatusMeta> = {
     label: 'Running',
     badgeClass: 'bg-blue-50/70 text-blue-800 border-blue-200/80',
     borderClass: 'border-blue-400',
-    dotClass: 'bg-blue-600 animate-pulse',
+    dotClass: 'bg-blue-600',
     description: 'Actively executing on a processing worker',
   },
   completed: {

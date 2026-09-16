@@ -37,34 +37,24 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Polling Indicator & Actions */}
+        {/* Actions */}
         <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-          {/* Polling indicator */}
-          <div className="flex items-center text-xs text-slate-500 gap-1.5">
-            <span className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="hidden sm:inline font-mono text-[11px] text-slate-500">
-              {formattedTime}
-            </span>
-          </div>
-
           {/* Manual Refresh button */}
           <button
             type="button"
             onClick={onRefresh}
             disabled={isFetching}
-            title="Refresh now"
-            className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-md transition-colors disabled:opacity-50 shrink-0"
+            title={formattedTime ? `Last updated: ${formattedTime}` : 'Refresh now'}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md border border-slate-200 transition-colors disabled:opacity-50 shrink-0"
             aria-label="Refresh job queue"
           >
             <RotateCw
               className={`h-3.5 w-3.5 ${isFetching ? 'animate-spin text-slate-700' : ''}`}
             />
+            <span className="hidden sm:inline">Refresh</span>
           </button>
 
-          {/* Create Job Primary CTA */}
+          {/* New Job CTA */}
           <button
             type="button"
             onClick={onCreateClick}
