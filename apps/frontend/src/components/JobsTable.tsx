@@ -173,16 +173,18 @@ export const JobsTable: React.FC<JobsTableProps> = ({
 
           return (
             <div key={job.id} className="p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-semibold text-slate-900 line-clamp-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-slate-900 truncate">
                     {job.title}
                   </h3>
-                  <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+                  <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate">
                     {job.id}
                   </p>
                 </div>
-                <StatusBadge status={job.status} size="sm" />
+                <div className="shrink-0">
+                  <StatusBadge status={job.status} size="sm" />
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">

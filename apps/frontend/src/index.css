@@ -8,8 +8,13 @@
   --border: 214 32% 91%;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   min-height: 100vh;
   background-color: #f8fafc;
   color: #0f172a;

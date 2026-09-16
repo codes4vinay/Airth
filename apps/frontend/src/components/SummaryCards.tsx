@@ -82,8 +82,9 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({
             type="button"
             onClick={() => onSelectFilter(isSelected && card.id ? undefined : card.id)}
             className={clsx(
-              'flex flex-col text-left p-4 rounded-lg bg-white border transition-all text-slate-800 shadow-sm',
+              'flex flex-col text-left p-3.5 sm:p-4 rounded-lg bg-white border transition-all text-slate-800 shadow-sm',
               isSelected ? card.activeBorder : `border-slate-200 ${card.hoverBorder}`,
+              card.id === 'failed' && 'col-span-2 sm:col-span-1',
             )}
           >
             <div className="flex items-center justify-between w-full">

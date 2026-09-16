@@ -22,7 +22,7 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
   ];
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full max-w-full min-w-0">
       {tabs.map((tab) => {
         const isActive = activeFilter === tab.id;
         return (
