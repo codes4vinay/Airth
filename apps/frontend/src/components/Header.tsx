@@ -39,9 +39,6 @@ export const Header: React.FC<HeaderProps> = ({
                 v1.0
               </span>
             </div>
-            <p className="text-xs text-slate-500 hidden sm:block">
-              PostgreSQL Atomic Row-Level State Machine
-            </p>
           </div>
         </div>
 

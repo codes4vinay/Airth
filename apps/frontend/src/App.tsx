@@ -201,7 +201,7 @@ const DashboardContent: React.FC = () => {
               >
                 Queued Tasks
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
                 Live monitoring of all background worker tasks and state transitions.
               </p>
             </div>
