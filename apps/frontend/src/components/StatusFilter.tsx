@@ -14,45 +14,45 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
   counts,
 }) => {
   const tabs: Array<{ id: JobStatus | undefined; label: string; count?: number }> = [
-    { id: undefined, label: 'All Jobs', count: counts?.total },
-    { id: 'pending', label: 'Pending', count: counts?.pending },
-    { id: 'running', label: 'Running', count: counts?.running },
-    { id: 'completed', label: 'Completed', count: counts?.completed },
-    { id: 'failed', label: 'Failed', count: counts?.failed },
+    { id: undefined, label: 'All', count: counts?.total ?? 0 },
+    { id: 'pending', label: 'Pending', count: counts?.pending ?? 0 },
+    { id: 'running', label: 'Running', count: counts?.running ?? 0 },
+    { id: 'completed', label: 'Completed', count: counts?.completed ?? 0 },
+    { id: 'failed', label: 'Failed', count: counts?.failed ?? 0 },
   ];
 
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none w-full max-w-full min-w-0">
-      {tabs.map((tab) => {
-        const isActive = activeFilter === tab.id;
-        return (
-          <button
-            key={tab.label}
-            type="button"
-            onClick={() => onSelect(tab.id)}
-            className={clsx(
-              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors',
-              isActive
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200',
-            )}
-          >
-            <span>{tab.label}</span>
-            {tab.count !== undefined && (
+    <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 scrollbar-none max-w-full min-w-0">
+      <div className="inline-flex items-center p-1 bg-slate-200/60 rounded-lg border border-slate-200/80 gap-1 shrink-0">
+        {tabs.map((tab) => {
+          const isActive = activeFilter === tab.id;
+          return (
+            <button
+              key={tab.label}
+              type="button"
+              onClick={() => onSelect(tab.id)}
+              className={clsx(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all',
+                isActive
+                  ? 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60',
+              )}
+            >
+              <span>{tab.label}</span>
               <span
                 className={clsx(
-                  'px-1.5 py-0.2 rounded-full text-[10px] font-semibold',
+                  'px-1.5 py-0.5 rounded text-[11px] font-mono leading-none',
                   isActive
-                    ? 'bg-slate-700 text-slate-200'
-                    : 'bg-slate-100 text-slate-600',
+                    ? 'bg-slate-100 text-slate-800 font-semibold'
+                    : 'bg-slate-200/80 text-slate-600',
                 )}
               >
-                {tab.count}
+                {tab.count ?? 0}
               </span>
-            )}
-          </button>
-        );
-      })}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

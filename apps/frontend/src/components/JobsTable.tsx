@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Job, JobStatus } from '../types/job';
 import { StatusBadge } from './StatusBadge';
 import { JobActions } from './JobActions';
-import { History, Trash2, Calendar, Tag } from 'lucide-react';
+import { History, Trash2 } from 'lucide-react';
 
 interface JobsTableProps {
   jobs: Job[];
@@ -38,9 +38,9 @@ export const JobsTable: React.FC<JobsTableProps> = ({
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left border-collapse" aria-label="Job queue table">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/75 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
               <th scope="col" className="py-3 px-4">
-                Job Details
+                Job
               </th>
               <th scope="col" className="py-3 px-4">
                 Type
@@ -49,13 +49,13 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                 Status
               </th>
               <th scope="col" className="py-3 px-4">
-                Created At
+                Created
               </th>
               <th scope="col" className="py-3 px-4 text-center">
                 Actions
               </th>
               <th scope="col" className="py-3 px-4 text-right">
-                Manage
+                <span className="sr-only">Manage</span>
               </th>
             </tr>
           </thead>
@@ -68,22 +68,24 @@ export const JobsTable: React.FC<JobsTableProps> = ({
               return (
                 <tr
                   key={job.id}
-                  className="hover:bg-slate-50/60 transition-colors group"
+                  className="hover:bg-slate-50/70 transition-colors group"
                 >
-                  {/* Title & UUID */}
-                  <td className="py-3.5 px-4">
-                    <div className="font-medium text-slate-900 line-clamp-1 max-w-sm">
+                  {/* Title & Short UUID */}
+                  <td className="py-3.5 px-4 max-w-xs">
+                    <div className="font-medium text-slate-900 truncate">
                       {job.title}
                     </div>
-                    <div className="text-[11px] font-mono text-slate-400 mt-0.5">
-                      {job.id}
+                    <div
+                      title={job.id}
+                      className="text-[11px] font-mono text-slate-400 mt-0.5 cursor-help"
+                    >
+                      {job.id.slice(0, 8)}...{job.id.slice(-4)}
                     </div>
                   </td>
 
                   {/* Type */}
                   <td className="py-3.5 px-4">
-                    <span className="inline-flex items-center gap-1 font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                      <Tag className="h-3 w-3 text-slate-400" />
+                    <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200/80 font-medium">
                       {job.type}
                     </span>
                   </td>
@@ -94,9 +96,19 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                   </td>
 
                   {/* Created At */}
-                  <td className="py-3.5 px-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
-                    <div>{createdDate.toLocaleDateString()}</div>
-                    <div className="text-slate-400">{createdDate.toLocaleTimeString()}</div>
+                  <td className="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
+                    <div>
+                      {createdDate.toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </div>
+                    <div className="text-slate-400 font-mono">
+                      {createdDate.toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
                   </td>
 
                   {/* Status Transitions */}
@@ -118,7 +130,7 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                         type="button"
                         onClick={() => onViewHistory(job)}
                         className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"
-                        title="View status audit history"
+                        title="View transition history"
                         aria-label={`View history for ${job.title}`}
                       >
                         <History className="h-4 w-4" />
@@ -178,8 +190,11 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                   <h3 className="text-sm font-semibold text-slate-900 truncate">
                     {job.title}
                   </h3>
-                  <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate">
-                    {job.id}
+                  <p
+                    title={job.id}
+                    className="text-[11px] font-mono text-slate-400 mt-0.5 truncate"
+                  >
+                    {job.id.slice(0, 8)}...{job.id.slice(-4)}
                   </p>
                 </div>
                 <div className="shrink-0">
@@ -187,14 +202,19 @@ export const JobsTable: React.FC<JobsTableProps> = ({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1 font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                  <Tag className="h-3 w-3 text-slate-400" />
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span className="font-mono text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200/80 font-medium">
                   {job.type}
                 </span>
-                <span className="inline-flex items-center gap-1 text-[11px] text-slate-400 font-mono">
-                  <Calendar className="h-3 w-3" />
-                  {createdDate.toLocaleDateString()} {createdDate.toLocaleTimeString()}
+                <span className="text-[11px] text-slate-400 font-mono">
+                  {createdDate.toLocaleDateString([], {
+                    month: 'short',
+                    day: 'numeric',
+                  })}{' '}
+                  {createdDate.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </span>
               </div>
 

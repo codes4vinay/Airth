@@ -11,7 +11,6 @@ import {
   useDeleteJob,
 } from './hooks/useJobs';
 import { Header } from './components/Header';
-import { SummaryCards } from './components/SummaryCards';
 import { StatusFilter } from './components/StatusFilter';
 import { JobsTable } from './components/JobsTable';
 import { CreateJobModal } from './components/CreateJobModal';
@@ -59,7 +58,7 @@ const DashboardContent: React.FC = () => {
     dataUpdatedAt,
   } = useJobs(activeFilter);
 
-  const { data: counts, isLoading: isCountsLoading } = useJobCounts();
+  const { data: counts } = useJobCounts();
 
   // Mutations
   const createJobMutation = useCreateJob();
@@ -178,35 +177,9 @@ const DashboardContent: React.FC = () => {
           </div>
         )}
 
-        {/* Metric Summary Cards */}
-        <section aria-labelledby="summary-title">
-          <h2 id="summary-title" className="sr-only">
-            Job Queue Status Overview
-          </h2>
-          <SummaryCards
-            counts={counts}
-            activeFilter={activeFilter}
-            onSelectFilter={setActiveFilter}
-            isLoading={isCountsLoading}
-          />
-        </section>
-
         {/* Queue Management Section */}
-        <section aria-labelledby="queue-table-title" className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 min-w-0">
-            <div className="min-w-0">
-              <h2
-                id="queue-table-title"
-                className="text-sm font-semibold text-slate-900 tracking-tight"
-              >
-                Queued Tasks
-              </h2>
-              <p className="text-xs text-slate-500 font-normal mt-0.5">
-                Live monitoring of all background worker tasks and state transitions.
-              </p>
-            </div>
-
-            {/* Status Filter Tabs */}
+        <section aria-label="Job queue management" className="space-y-4">
+          <div className="flex items-center justify-between gap-3 min-w-0">
             <StatusFilter
               activeFilter={activeFilter}
               onSelect={setActiveFilter}
