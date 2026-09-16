@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 sm:gap-2">
               <h1 className="text-sm sm:text-lg font-semibold text-slate-900 tracking-tight truncate">
-                Job Queue<span className="hidden xs:inline sm:inline"> Operations</span>
+                Job Queue<span className="hidden sm:inline"> Management Dashboard</span>
               </h1>
               <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
                 v1.0
