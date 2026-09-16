@@ -145,6 +145,31 @@ In PostgreSQL, an `UPDATE` statement acquires an exclusive row-level write lock:
 
 ---
 
+## Direct Answers to Assignment Questions ("3. Think About This")
+
+| Question | Answer & Architectural Decision |
+|---|---|
+| **Where should this rule be enforced?** | **In the backend and the database engine.** While the React UI conditionally renders valid action buttons for a smooth user experience, client-side logic can be bypassed. The authoritative invariant enforcement lives in the NestJS service layer ([jobs.service.ts](file:///c:/Users/kumar/OneDrive/Desktop/Airth/apps/backend/src/jobs/jobs.service.ts)) backed by PostgreSQL conditional updates. |
+| **What happens if someone bypasses the React application and calls the API directly?** | The backend rejects invalid requests with **`409 Conflict`** (or `400 Bad Request` if payload schema/enums are invalid). Bypassing the frontend via `curl`, Postman, or rogue scripts cannot violate state transitions because the backend verifies the transition against the state machine ([jobs.constants.ts](file:///c:/Users/kumar/OneDrive/Desktop/Airth/apps/backend/src/jobs/jobs.constants.ts)) before touching data. |
+| **What happens when two requests arrive at nearly the same time?** | Both requests enter PostgreSQL transactions. PostgreSQL issues a row-level lock to the first request, which executes `UPDATE jobs SET status = 'running' WHERE id = :id AND status = 'pending'`. The second request acquires the lock immediately after, but the `WHERE status = 'pending'` condition now evaluates to false. Exactly **one request updates 1 row and succeeds (200 OK)**, while the concurrent duplicate updates 0 rows and returns **`409 Conflict`**. |
+| **How would you prevent an invalid or inconsistent state?** | Using **row-level atomic conditional updates** inside an ACID **database transaction** (`prisma.$transaction`). State transitions and history recording succeed or fail as an atomic unit. There is no unprotected window between reading state and writing state. |
+
+---
+
+## Production-Ready Bonus Improvements
+
+The assignment invites adding a small improvement that makes the system more production-ready:
+
+### Bonus 1: Immutable Status Transition Audit History (`JobStatusHistory`)
+- **What was added**: A dedicated PostgreSQL table `job_status_histories` tracking `id`, `jobId`, `fromStatus`, `toStatus`, and `changedAt`.
+- **Why chosen**: Real-world job queues and distributed worker pipelines require auditability. When background jobs fail or get stuck, engineers need to see the exact progression of states and timestamps rather than just the final state. Executing the history insertion in the same transaction as the job status update guarantees that every successful transition has an audit trail and no failed transition produces orphaned logs.
+
+### Bonus 2: Tab-Aware Background Polling with TanStack Query
+- **What was added**: 10-second automatic polling with `refetchIntervalInBackground: false` and centralized `POLLING_INTERVAL_MS` constant.
+- **Why chosen**: In production dashboards, engineers leave monitoring tabs open for days. Naive `setInterval` implementations cause memory leaks, battery drain, and uncoordinated requests. TanStack Query automatically halts network requests when the browser tab is inactive or minimized, immediately syncing the latest data upon refocus.
+
+---
+
 ## Database Design & Schema Explanation
 
 ### Why PostgreSQL?
