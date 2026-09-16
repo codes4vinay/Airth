@@ -300,6 +300,25 @@ describe('JobsService', () => {
         toStatus: JobStatus.failed,
       });
     });
+
+    it('should accurately capture fromStatus as pending when failing without currentStatus parameter', async () => {
+      jobsDb.set('job-1', {
+        id: 'job-1',
+        title: 'Job 1',
+        type: 'A',
+        status: JobStatus.pending,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const updated = await service.updateJobStatus('job-1', {
+        status: JobStatus.failed,
+      });
+
+      expect(updated.status).toBe(JobStatus.failed);
+      expect(historyDb[0].fromStatus).toBe(JobStatus.pending);
+      expect(historyDb[0].toStatus).toBe(JobStatus.failed);
+    });
   });
 
   describe('7. Valid running -> completed transition', () => {
@@ -342,6 +361,25 @@ describe('JobsService', () => {
 
       expect(updated.status).toBe(JobStatus.failed);
       expect(historyDb.length).toBe(1);
+      expect(historyDb[0].fromStatus).toBe(JobStatus.running);
+      expect(historyDb[0].toStatus).toBe(JobStatus.failed);
+    });
+
+    it('should accurately capture fromStatus as running when failing without currentStatus parameter', async () => {
+      jobsDb.set('job-2', {
+        id: 'job-2',
+        title: 'Job 2',
+        type: 'B',
+        status: JobStatus.running,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const updated = await service.updateJobStatus('job-2', {
+        status: JobStatus.failed,
+      });
+
+      expect(updated.status).toBe(JobStatus.failed);
       expect(historyDb[0].fromStatus).toBe(JobStatus.running);
       expect(historyDb[0].toStatus).toBe(JobStatus.failed);
     });

@@ -13,11 +13,7 @@ import {
   JobStatus,
   JobStatusHistoryEntity,
 } from './jobs.types';
-import {
-  VALID_STATUS_TRANSITIONS,
-  getValidPreviousStatuses,
-  isValidTransition,
-} from './jobs.constants';
+import { VALID_STATUS_TRANSITIONS, isValidTransition } from './jobs.constants';
 
 @Injectable()
 export class JobsService {
@@ -120,33 +116,39 @@ export class JobsService {
   ): Promise<JobEntity> {
     const targetStatus = dto.status;
 
-    // Validate target status validity against state machine
-    const allowedPrevious = dto.currentStatus
-      ? [dto.currentStatus]
-      : getValidPreviousStatuses(targetStatus);
-
-    if (allowedPrevious.length === 0) {
-      throw new ConflictException(
-        `Cannot transition to "${targetStatus}". No valid transitions lead to this status.`,
-      );
-    }
-
-    if (
-      dto.currentStatus &&
-      !isValidTransition(dto.currentStatus, targetStatus)
-    ) {
-      throw new ConflictException(
-        `Invalid transition from "${dto.currentStatus}" to "${targetStatus}".`,
-      );
-    }
-
     return await this.prisma.$transaction(async (tx) => {
-      // Row-level atomic conditional update:
-      // Only updates the row if ID matches AND current status matches the expected allowed previous status
+      // Find the existing job inside the transaction
+      const existing = await tx.job.findUnique({
+        where: { id },
+        select: { id: true, status: true },
+      });
+
+      if (!existing) {
+        throw new NotFoundException(`Job with ID "${id}" was not found`);
+      }
+
+      // If caller provided an expected current status, verify it matches
+      if (dto.currentStatus && existing.status !== dto.currentStatus) {
+        throw new ConflictException(
+          `Cannot transition job: expected current status "${dto.currentStatus}", but job is currently "${existing.status}".`,
+        );
+      }
+
+      // Verify the transition from existing.status to targetStatus is valid
+      if (!isValidTransition(existing.status, targetStatus)) {
+        throw new ConflictException(
+          `Cannot transition job from "${existing.status}" to "${targetStatus}". Valid transitions from "${existing.status}" are: [${VALID_STATUS_TRANSITIONS[existing.status].join(', ')}].`,
+        );
+      }
+
+      const expectedPrevious = existing.status;
+
+      // PostgreSQL row-level atomic conditional update:
+      // Enforces: UPDATE job WHERE id = requestedId AND status = expectedPreviousStatus
       const updateResult = await tx.job.updateMany({
         where: {
           id,
-          status: { in: allowedPrevious },
+          status: expectedPrevious,
         },
         data: {
           status: targetStatus,
@@ -154,18 +156,14 @@ export class JobsService {
       });
 
       if (updateResult.count === 0) {
-        // Atomic condition was not met. Determine whether missing (404) or state conflict (409).
-        const existing = await tx.job.findUnique({
+        // Race condition: a concurrent transaction updated the status first
+        const current = await tx.job.findUnique({
           where: { id },
-          select: { id: true, status: true },
+          select: { status: true },
         });
 
-        if (!existing) {
-          throw new NotFoundException(`Job with ID "${id}" was not found`);
-        }
-
         throw new ConflictException(
-          `Cannot transition job from "${existing.status}" to "${targetStatus}". Valid transitions from "${existing.status}" are: [${VALID_STATUS_TRANSITIONS[existing.status].join(', ')}].`,
+          `Concurrent update conflict on job "${id}". The job status changed to "${current?.status}" before this update could be applied.`,
         );
       }
 
@@ -174,27 +172,17 @@ export class JobsService {
         where: { id },
       });
 
-      // Unambiguous fromStatus:
-      // If dto.currentStatus was specified, use that.
-      // If allowedPrevious had only 1 valid predecessor, use that.
-      // Otherwise default to first predecessor.
-      const fromStatus =
-        dto.currentStatus ??
-        (allowedPrevious.length === 1
-          ? allowedPrevious[0]
-          : allowedPrevious[0]);
-
       // Record status transition in history within the same atomic transaction
       await tx.jobStatusHistory.create({
         data: {
           jobId: id,
-          fromStatus,
+          fromStatus: expectedPrevious,
           toStatus: targetStatus,
         },
       });
 
       this.logger.log(
-        `Job [${id}] transitioned from "${fromStatus}" to "${targetStatus}"`,
+        `Job [${id}] transitioned from "${expectedPrevious}" to "${targetStatus}"`,
       );
 
       return updatedJob;
