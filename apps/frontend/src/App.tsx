@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   QueryClient,
   QueryClientProvider,
@@ -42,6 +42,19 @@ const DashboardContent: React.FC = () => {
     message: string;
     type: 'success' | 'error' | 'conflict';
   } | null>(null);
+
+  // Auto-dismiss alert banner after 4s for success, 6s for errors/conflicts
+  useEffect(() => {
+    if (!banner) return;
+    const timer = setTimeout(
+      () => {
+        setBanner(null);
+      },
+      banner.type === 'success' ? 4000 : 6000,
+    );
+
+    return () => clearTimeout(timer);
+  }, [banner]);
 
   // Mutation track states
   const [updatingJobId, setUpdatingJobId] = useState<string | null>(null);
