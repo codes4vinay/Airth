@@ -265,7 +265,7 @@ VITE_API_BASE_URL=http://localhost:4000
 npm --workspace=apps/backend run prisma:generate
 
 # Apply migrations to your PostgreSQL database
-npx --prefix apps/backend prisma migrate deploy
+npm --workspace=apps/backend run prisma:deploy
 ```
 
 ### 5. Start Development Servers
@@ -307,8 +307,8 @@ Once running, open:
 
 ### Backend (e.g. Render, Railway)
 - **Root Directory**: `apps/backend` (or project root with workspace flags)
-- **Build Command**: `npm install && npm --workspace=apps/backend run build`
-- **Start Command**: `npm --workspace=apps/backend run start:prod`
+- **Build Command**: `npm install && npm --workspace=apps/backend run prisma:generate && npm --workspace=apps/backend run prisma:deploy && npm --workspace=apps/backend run build`
+- **Start Command**: `node apps/backend/dist/main`
 - **Environment Variables**: Set `DATABASE_URL`, `DIRECT_URL`, `PORT`, `FRONTEND_URL`, and `NODE_ENV=production`.
 
 ### Frontend (e.g. Vercel, Netlify)
@@ -320,7 +320,7 @@ Once running, open:
 ### Database (Neon PostgreSQL)
 - Create a project on [Neon](https://neon.tech).
 - Provide the pooled connection string to `DATABASE_URL` and direct connection string to `DIRECT_URL`.
-- Run `npx --prefix apps/backend prisma migrate deploy` to create tables and indexes.
+- Run `npm --workspace=apps/backend run prisma:deploy` to apply migrations.
 
 ---
 
