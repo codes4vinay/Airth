@@ -41,6 +41,29 @@ async function bootstrap() {
   logger.log(
     `Swagger documentation available at http://localhost:${port}/docs`,
   );
+
+  // Self-ping every 14 minutes to prevent Render free-tier instance from sleeping (Render sleeps after 15m inactivity)
+  const renderExternalUrl =
+    process.env.RENDER_EXTERNAL_URL ||
+    process.env.BACKEND_URL ||
+    'https://airth-job-queue-backend-q1fp.onrender.com';
+
+  if (process.env.NODE_ENV === 'production' && renderExternalUrl) {
+    const FOURTEEN_MINUTES_MS = 14 * 60 * 1000;
+    const healthUrl = `${renderExternalUrl.replace(/\/$/, '')}/health`;
+
+    setInterval(async () => {
+      try {
+        const res = await fetch(healthUrl);
+        logger.log(`Keep-alive ping to ${healthUrl}: status ${res.status}`);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.warn(`Keep-alive ping failed: ${message}`);
+      }
+    }, FOURTEEN_MINUTES_MS);
+
+    logger.log(`Scheduled 14-minute keep-alive ping to ${healthUrl}`);
+  }
 }
 
 bootstrap();

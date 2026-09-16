@@ -7,10 +7,8 @@ A full-stack job queue management dashboard built with a React frontend, NestJS 
 ## Live Demo
 
 - **Frontend**: `<ACTUAL_FRONTEND_URL>`
-- **Backend API**: `<ACTUAL_BACKEND_URL>`
-- **Swagger**: `<ACTUAL_SWAGGER_URL>`
-
-*(Update these URLs once deployed to your hosting provider.)*
+- **Backend API**: https://airth-job-queue-backend-q1fp.onrender.com
+- **Swagger**: https://airth-job-queue-backend-q1fp.onrender.com/docs
 
 ---
 
