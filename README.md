@@ -132,10 +132,6 @@ The assignment asked for small improvements that make the system more production
 - **Why**: Keeps multiple dashboard tabs synchronized without slamming the server.
 - **Implementation**: The dashboard polls `GET /jobs` every 10 seconds. When the browser tab is hidden (`document.visibilityState === 'hidden'`), polling pauses to save bandwidth and CPU. As soon as the tab becomes active, it immediately triggers a refresh and resumes the timer.
 
-### 3. Render Keep-Alive Script
-- **Why**: Render free-tier instances spin down after 15 minutes of inactivity.
-- **Implementation**: A light background timer issues an external HTTPS ping to `/health` every 14 minutes, resetting the idle countdown so evaluators don't experience a 50-second cold start.
-
 ---
 
 ## API Endpoints
@@ -262,7 +258,6 @@ npm run dev:frontend
 1. **State Dashboard vs. Background Worker Engine**: This project manages job states and lifecycle transitions. It does not run background worker threads (like BullMQ or Celery). "Running" represents the job state recorded in the system.
 2. **Conditional Updates vs. Redis Distributed Locks**: For a single database architecture, PostgreSQL row-level locks via conditional updates are simple, ACID-compliant, and avoid the operational overhead of a Redis cluster.
 3. **Tab-Aware Polling vs. WebSockets**: 10-second tab-aware polling provides near-instant synchronization across tabs without requiring WebSocket state management or reconnection infrastructure.
-4. **Lightweight React State**: Standard React hooks (`useState`, `useEffect`, `useCallback`) are used instead of heavy global state managers (Redux, Zustand) because state flows cleanly from API requests.
 
 ---
 
